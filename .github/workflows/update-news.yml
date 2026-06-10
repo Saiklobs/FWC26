@@ -1,0 +1,24 @@
+name: Update World Cup News
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install requests beautifulsoup4 lxml
+      - run: python update_news.py
+      - name: Commit changes
+        run: |
+          git config user.email "bot@fwc26.com"
+          git config user.name "FWC26 Bot"
+          git add -A
+          git diff --staged --quiet || git commit -m "Auto update news"
+          git push
