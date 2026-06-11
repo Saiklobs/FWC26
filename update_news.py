@@ -1,12 +1,13 @@
 import requests
 import re
+import os
 from datetime import datetime
 from bs4 import BeautifulSoup
 
 FEEDS = [
     "https://feeds.bbci.co.uk/sport/football/rss.xml",
-    "https://www.goal.com/feeds/en/news",
     "https://www.espn.com/espn/rss/soccer/news",
+    "https://www.goal.com/feeds/en/news",
 ]
 
 KEYWORDS = [
@@ -24,7 +25,7 @@ def fetch_articles():
             r = requests.get(feed_url, timeout=10,
                 headers={"User-Agent": "Mozilla/5.0"})
             soup = BeautifulSoup(r.content, "xml")
-            items = soup.findAll("item")
+            items = soup.find_all("item")
             for item in items[:10]:
                 title = item.find("title")
                 desc = item.find("description")
@@ -79,10 +80,24 @@ def build_news_html(articles):
     return html
 
 def update_html(articles):
-    with open("index.html", "r", encoding="utf-8") as f:
+    # Find the HTML file whatever it's named
+    html_file = None
+    for fname in os.listdir("."):
+        if fname.endswith(".html"):
+            html_file = fname
+            print(f"Found HTML file: {fname}")
+            break
+
+    if not html_file:
+        print("❌ No HTML file found!")
+        return
+
+    with open(html_file, "r", encoding="utf-8") as f:
         content = f.read()
+
     timestamp = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
     news_html = build_news_html(articles)
+
     new_section = f"""<!-- AUTO-NEWS-START -->
     <section style="max-width:900px;margin:40px auto;padding:0 20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:24px;">
@@ -96,6 +111,7 @@ def update_html(articles):
       {news_html}
     </section>
     <!-- AUTO-NEWS-END -->"""
+
     if "<!-- AUTO-NEWS-START -->" in content:
         content = re.sub(
             r'<!-- AUTO-NEWS-START -->.*?<!-- AUTO-NEWS-END -->',
@@ -105,9 +121,11 @@ def update_html(articles):
         )
     else:
         content = content.replace("</body>", new_section + "\n</body>")
-    with open("index.html", "w", encoding="utf-8") as f:
+
+    with open(html_file, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"✅ Done! Added {len(articles)} articles")
+
+    print(f"✅ Done! Added {len(articles)} articles to {html_file}")
 
 if __name__ == "__main__":
     print("🔍 Fetching World Cup news...")
